@@ -1,8 +1,9 @@
 'use client'
 import React from 'react'
 import Card from './Card'
+import HiddenCard from './HiddenCard'
 
-export default function PlayerSeat({ player, position = 0 }: any) {
+export default function PlayerSeat({ player, position = 0, currentPlayerId, phase }: any) {
   if (!player) return null
 
   const chipCountImageURL = '/old-assets/chips.svg'
@@ -33,7 +34,11 @@ export default function PlayerSeat({ player, position = 0 }: any) {
       </div>
       <div className='centered-flex-row abscard'>
         {(player.cards || player.hand || []).map((c: any, i: number) => (
-          <Card key={i} cardData={c} applyFoldedClassname={player.folded} />
+          player.id === currentPlayerId ? (
+            <Card key={i} cardData={c} applyFoldedClassname={player.folded} isShowdownCard={phase === 'showdown'} />
+          ) : (
+            <HiddenCard key={i} cardData={c} applyFoldedClassname={player.folded} isShowdownCard={phase === 'showdown'} />
+          )
         ))}
       </div>
     </div>

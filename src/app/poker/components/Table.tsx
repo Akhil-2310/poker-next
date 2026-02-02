@@ -32,8 +32,8 @@ export default function Table({ state, actions }: any) {
         <img className="poker-table--table-image" src={'/old-assets/table-nobg-svg-01.svg'} alt="Poker Table" />
 
         {/* Render players in order: current player at position 0 (bottom center), opponent at position 1 (bottom left) */}
-        {orderedPlayers[0] ? <PlayerSeat key={orderedPlayers[0].id} player={orderedPlayers[0]} position={0} /> : null}
-        {orderedPlayers[1] ? <PlayerSeat key={orderedPlayers[1].id} player={orderedPlayers[1]} position={1} /> : null}
+        {orderedPlayers[0] ? <PlayerSeat key={orderedPlayers[0].id} player={orderedPlayers[0]} position={0} currentPlayerId={state.playerId} phase={state.phase} /> : null}
+        {orderedPlayers[1] ? <PlayerSeat key={orderedPlayers[1].id} player={orderedPlayers[1]} position={1} currentPlayerId={state.playerId} phase={state.phase} /> : null}
       </div>
     </section>
   )

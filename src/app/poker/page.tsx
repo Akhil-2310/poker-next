@@ -84,6 +84,8 @@ export default function PokerPage() {
 
   const canAct = state.phase !== 'idle' && state.phase !== 'showdown' && !state.actionInProgress
   const isPlayerTurn = state.players.length > 0 && state.players[state.activePlayerIndex]?.id === state.playerId
+  const currentPlayer = state.players.find(p => p.id === state.playerId)
+  const isPlayerAllIn = currentPlayer && currentPlayer.chips === 0
 
   if (gameMode === 'menu') {
     return (
@@ -279,69 +281,72 @@ export default function PokerPage() {
       {/* Community Cards */}
       <div className="community-card-container">
         {state.community.map((c: any, i: number) => (
-          <Card key={i} cardData={{ ...c, animationDelay: i * 150 }} />
+          <Card key={i} cardData={{ ...c, animationDelay: i * 150 }} isShowdownCard={state.phase === 'showdown'} />
         ))}
       </div>
 
-      {/* Winner Announcement Modal */}
+      {/* Winner Announcement Banner - On Screen */}
       {state.phase === 'showdown' && state.winner && (
         <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 500,
-          animation: 'fadeIn 0.5s ease-in-out'
+          position: 'fixed',
+          bottom: 90,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 200,
+          animation: 'slideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-            padding: 40,
+            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+            padding: '20px 40px',
             borderRadius: 16,
             textAlign: 'center',
-            color: 'white',
-            maxWidth: 500,
-            border: '3px solid #FFD700',
-            boxShadow: '0 0 30px rgba(255, 215, 0, 0.5)',
-            animation: 'slideUp 0.6s ease-out'
+            color: '#000',
+            maxWidth: 600,
+            border: '3px solid #FF6B35',
+            boxShadow: '0 0 40px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 107, 53, 0.6)',
+            backdropFilter: 'blur(5px)'
           }}>
-            <h1 style={{ fontSize: 48, margin: '0 0 20px 0', color: '#FFD700' }}>🏆 WINNER 🏆</h1>
-            <h2 style={{ fontSize: 32, margin: '0 0 15px 0', color: '#fff' }}>{state.winner.name}</h2>
-            <p style={{ fontSize: 18, margin: '15px 0', color: '#FFD700' }}>
-              Won <strong>{state.winner.potWon}</strong> chips
-            </p>
-            <p style={{ fontSize: 16, margin: '10px 0', color: '#aaa' }}>
+            <h1 style={{ fontSize: 42, margin: '0 0 10px 0', color: '#000', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>🏆 WINNER 🏆</h1>
+            <h2 style={{ fontSize: 28, margin: '0 0 12px 0', color: '#1a1a1a', fontWeight: 'bold' }}>{state.winner.name}</h2>
+            <div style={{ display: 'flex', gap: 30, justifyContent: 'center', marginBottom: 15, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ margin: '0 0 5px 0', color: '#333', fontWeight: 'bold', fontSize: 12 }}>WON</p>
+                <p style={{ margin: 0, color: '#000', fontSize: 20, fontWeight: 'bold' }}>+{state.winner.potWon} 💰</p>
+              </div>
+              <div style={{ borderLeft: '2px solid #333', paddingLeft: 30 }}>
+                <p style={{ margin: '0 0 5px 0', color: '#333', fontWeight: 'bold', fontSize: 12 }}>HAND</p>
+                <p style={{ margin: 0, color: '#000', fontSize: 16, fontWeight: 'bold' }}>{state.winner.handType}</p>
+              </div>
+              <div style={{ borderLeft: '2px solid #333', paddingLeft: 30 }}>
+                <p style={{ margin: '0 0 5px 0', color: '#333', fontWeight: 'bold', fontSize: 12 }}>TOTAL</p>
+                <p style={{ margin: 0, color: '#000', fontSize: 20, fontWeight: 'bold' }}>{state.winner.chips}</p>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, margin: '10px 0 0 0', color: '#555', fontStyle: 'italic' }}>
               {state.winner.reason}
             </p>
-            <p style={{ fontSize: 18, margin: '10px 0 30px 0', color: '#FFD700', fontWeight: 'bold' }}>
-              {state.winner.handType}
-            </p>
-            <p style={{ fontSize: 14, margin: '10px 0 0 0', color: '#4EB04E' }}>
-              Total chips: <strong>{state.winner.chips}</strong>
-            </p>
-            <button
-              onClick={() => actions.nextRound()}
+            <button ref={nextRoundButtonRef}
+              onClick={() => {
+                soundEffects.playWin()
+                actions.nextRound()
+              }}
               style={{
-                marginTop: 30,
-                padding: '12px 40px',
-                background: isNextRoundHovered ? '#5CB85C' : '#4EB04E',
-                color: 'white',
-                border: 'none',
-                borderRadius: 25,
-                fontSize: 16,
+                marginTop: 15,
+                padding: '10px 30px',
+                background: isNextRoundHovered ? '#FFA500' : '#FFD700',
+                color: '#000',
+                border: '2px solid #FF6B35',
+                borderRadius: 20,
+                fontSize: 14,
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                boxShadow: isNextRoundHovered ? '0 0 20px rgba(255, 165, 0, 0.8)' : '0 0 10px rgba(255, 215, 0, 0.6)'
               }}
               onMouseEnter={() => setIsNextRoundHovered(true)}
               onMouseLeave={() => setIsNextRoundHovered(false)}
             >
-              Next Round
+              🎲 Next Round
             </button>
           </div>
         </div>
@@ -371,7 +376,7 @@ export default function PokerPage() {
             >
               🎮 Start Game
             </button>
-          ) : canAct && isPlayerTurn ? (
+          ) : canAct && isPlayerTurn && !isPlayerAllIn ? (
             <>
               <button ref={callButtonRef} className='action-button' onClick={handleCheck} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #00BFFF 0%, #00FFFF 100%)', color: '#000', fontWeight: 'bold', boxShadow: '0 0 15px rgba(0, 191, 255, 0.8)', border: '2px solid #00FFFF', cursor: 'pointer', fontSize: 14 }}>
                 {state.highBet > 0 ? `💰 CALL ($${state.highBet - (state.players[state.activePlayerIndex]?.roundBet || 0)})` : '✓ CHECK'}
@@ -390,6 +395,10 @@ export default function PokerPage() {
                 🔼 RAISE
               </button>
             </>
+          ) : canAct && isPlayerTurn && isPlayerAllIn ? (
+            <div style={{ fontSize: 16, fontWeight: 'bold', color: '#FF69B4', textShadow: '0 0 15px rgba(255, 105, 180, 0.8)', animation: 'pulse 1s infinite' }}>
+              💸 ALL-IN
+            </div>
           ) : state.phase === 'showdown' ? (
             <button ref={nextRoundButtonRef} className='action-button' onClick={handleNextRound} style={{ borderRadius: 25, padding: '12px 40px', fontSize: 16, fontWeight: 'bold', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#000', boxShadow: '0 0 20px rgba(255, 215, 0, 0.8)', border: 'none', cursor: 'pointer' }}>🎲 Next Round</button>
           ) : null}

@@ -155,11 +155,23 @@ function allBetsMatched(game) {
   
   if (activePlayers.length <= 1) return true;
   
-  // All players must have acted AND have matching bets
-  const allActed = activePlayers.every(p => p.actedThisRound);
-  const betsMatch = activePlayers.every(p => p.roundBet === activePlayers[0].roundBet);
+  // For betting to be complete:
+  // 1. All players who have chips remaining must have acted
+  // 2. All remaining-chip players have matching bets
+  // 3. OR all players are all-in (can't act anymore)
   
-  return allActed && betsMatch;
+  const playersWithChips = activePlayers.filter(p => p.chips > 0);
+  const allAllIn = playersWithChips.length === 0; // Everyone is all-in
+  
+  if (allAllIn) return true; // All players are all-in, no more betting possible
+  
+  // Players with chips remaining must have all acted
+  const playersWithChipsActed = playersWithChips.every(p => p.actedThisRound);
+  
+  // Their bets must match
+  const betsMatch = playersWithChips.every(p => p.roundBet === playersWithChips[0].roundBet);
+  
+  return playersWithChipsActed && betsMatch;
 }
 
 function advancePhase(game) {
@@ -168,7 +180,48 @@ function advancePhase(game) {
   
   if (currentIndex === -1) return;
   
-  const nextIndex = currentIndex + 1;
+  // Check if all active players are all-in
+  const activePlayers = game.players.filter(p => !p.folded && p.isActive);
+  const allAllIn = activePlayers.every(p => p.chips === 0);
+  
+  let nextIndex = currentIndex + 1;
+  
+  // If all players are all-in, skip remaining betting rounds and go straight to showdown
+  if (allAllIn) {
+    // Complete all remaining community cards if needed
+    if (game.community.length < 5) {
+      dealCommunityCards(game, 5 - game.community.length);
+    }
+    game.phase = 'showdown';
+    
+    // Determine winner
+    const activePlayers = game.players.filter(p => !p.folded);
+    let winner;
+    let winReason = '';
+    
+    if (activePlayers.length === 1) {
+      winner = activePlayers[0];
+      winReason = 'Everyone else folded';
+    } else {
+      winner = determineWinner(game.players, game.community);
+      winReason = 'Best hand';
+    }
+
+    if (winner) {
+      winner.chips += game.pot;
+      console.log(`   🏆 Winner: ${winner.name} wins ${game.pot} chips! (${winReason})`);
+      game.winner = {
+        id: winner.id,
+        name: winner.name,
+        chips: winner.chips,
+        potWon: game.pot,
+        reason: winReason,
+        hand: winner.hand,
+        handType: winner.handType || 'High Card'
+      };
+    }
+    return;
+  }
   
   if (nextIndex >= phases.length) {
     game.phase = 'showdown';
@@ -176,6 +229,23 @@ function advancePhase(game) {
   }
   
   game.phase = phases[nextIndex];
+  
+  // Reset bets AFTER advancing, before dealing new cards
+  // This ensures the action state is clean for the next betting round
+  if (game.phase.startsWith('betting')) {
+    game.players.forEach(p => {
+      p.roundBet = 0;
+      p.actedThisRound = false;
+    });
+    game.highBet = 0;
+    // For heads-up: alternate who goes first in each betting round
+    // betting1 (preflop) → Player 0 goes first
+    // betting2 (flop) → Player 1 goes first
+    // betting3 (turn) → Player 0 goes first
+    // betting4 (river) → Player 1 goes first
+    const bettingRoundNumber = ['betting1', 'betting2', 'betting3', 'betting4'].indexOf(game.phase);
+    game.activePlayerIndex = bettingRoundNumber % 2;
+  }
   
   // Deal community cards on appropriate phases
   if (game.phase === 'flop') {
@@ -210,16 +280,6 @@ function advancePhase(game) {
     };
     
     console.log(`   🏆 Winner: ${winner.name} wins ${game.pot} chips! (${winReason})`);
-  }
-  
-  // Reset bets for next betting phase
-  if (game.phase.startsWith('betting')) {
-    game.players.forEach(p => {
-      p.roundBet = 0;
-      p.actedThisRound = false;
-    });
-    game.highBet = 0;
-    game.activePlayerIndex = 0;
   }
 }
 
@@ -430,6 +490,12 @@ wss.on('connection', (ws) => {
             p.hand = [];
             p.roundBet = 0;
             p.actedThisRound = false;
+            
+            // If player is broke (0 chips), give them starting chips for rebuy
+            if (p.chips === 0) {
+              p.chips = 1000; // Starting chip amount
+              console.log(`   💰 ${p.name} rebuys for 1000 chips`);
+            }
           });
           game.community = [];
           game.winner = null;
@@ -570,9 +636,17 @@ function advanceActivePlayer(game) {
   const currentPlayerIndex = game.activePlayerIndex;
   let nextIndex = (currentPlayerIndex + 1) % game.players.length;
   
-  // Skip folded players
-  while (game.players[nextIndex].folded) {
+  // Skip folded players and all-in players (chips === 0)
+  let skipCount = 0;
+  while ((game.players[nextIndex].folded || game.players[nextIndex].chips === 0) && skipCount < game.players.length) {
     nextIndex = (nextIndex + 1) % game.players.length;
+    skipCount++;
+  }
+  
+  // If all remaining active players are all-in or folded, we've looped through everyone
+  if (skipCount >= game.players.length) {
+    // All remaining players are all-in, end the betting round
+    return;
   }
   
   game.activePlayerIndex = nextIndex;

@@ -22,7 +22,7 @@ function renderUnicodeSuitSymbol(suit: string) {
   }
 }
 
-export default function Card({ cardData, applyFoldedClassname }: any) {
+export default function Card({ cardData, applyFoldedClassname, isShowdownCard }: any) {
   if (!cardData) return null
   
   // Handle both {rank, suit} and {cardFace, suit} formats
@@ -37,8 +37,11 @@ export default function Card({ cardData, applyFoldedClassname }: any) {
   const suitLower = suit.toLowerCase()
   const color = (suitLower === 'diamond' || suitLower === 'diamonds' || suitLower === 'heart' || suitLower === 'hearts') ? 'red' : 'black'
   
+  // Apply card flip animation on showdown
+  const cardClassName = isShowdownCard ? `playing-card cardIn card-flip ${applyFoldedClassname ? 'folded' : ''}` : `playing-card cardIn ${applyFoldedClassname ? 'folded' : ''}`
+  
   return (
-    <div className={`playing-card cardIn ${applyFoldedClassname ? 'folded' : ''}`} style={{ animationDelay: `${applyFoldedClassname ? 0 : animationDelay}ms`, padding: 8, minWidth: 36 }}>
+    <div className={cardClassName} style={{ animationDelay: `${isShowdownCard ? (animationDelay || 0) + 500 : applyFoldedClassname ? 0 : animationDelay}ms`, padding: 8, minWidth: 36 }}>
       <h6 style={{ color, margin: 0, fontSize: 12, fontWeight: 'bold' }}>{`${rank}${renderUnicodeSuitSymbol(suit)}`}</h6>
     </div>
   )

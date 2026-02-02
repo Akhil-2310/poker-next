@@ -71,6 +71,73 @@ const actionAnimations = `
     }
   }
 
+  @keyframes cardFlip {
+    0% {
+      transform: rotateY(0) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: rotateY(90deg) scale(1.05);
+    }
+    100% {
+      transform: rotateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes revealCard {
+    0% {
+      transform: translateY(-20px) rotateY(90deg);
+      opacity: 0;
+    }
+    50% {
+      transform: translateY(-10px) rotateY(45deg);
+    }
+    100% {
+      transform: translateY(0) rotateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-60px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(60px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-flip {
+    animation: cardFlip 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .card-reveal {
+    animation: revealCard 2s ease-out;
+  }
+
   .action-call {
     animation: callFlash 0.6s ease-in-out !important;
   }
