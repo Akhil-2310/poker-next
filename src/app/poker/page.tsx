@@ -1,10 +1,12 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Table from './components/Table'
 import Card from './components/Card'
 import useWebSocketGame from './hooks/useWebSocketGame'
 import './poker.css'
 import ActionPanel from './components/ActionPanel'
+import { soundEffects } from './utils/sounds'
+import { injectAnimationStyles, createFloatingText, animateButton } from './utils/animations'
 
 export default function PokerPage() {
   const { state, connectionState, gameId, error, actions } = useWebSocketGame()
@@ -12,6 +14,61 @@ export default function PokerPage() {
   const [joinGameId, setJoinGameId] = useState('')
   const [playerName, setPlayerName] = useState('Player')
   const [isNextRoundHovered, setIsNextRoundHovered] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const callButtonRef = useRef<HTMLButtonElement>(null)
+  const foldButtonRef = useRef<HTMLButtonElement>(null)
+  const startButtonRef = useRef<HTMLButtonElement>(null)
+  const nextRoundButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Initialize animations on mount
+  useEffect(() => {
+    injectAnimationStyles()
+  }, [])
+
+  // Wrapped action handlers with animations and sounds
+  const handleCheck = () => {
+    soundEffects.playCall()
+    if (callButtonRef.current) animateButton(callButtonRef.current, 'action-call')
+    const playerPos = state.players[state.activePlayerIndex]
+    if (playerPos) {
+      createFloatingText('✓ CHECK', window.innerWidth / 2, window.innerHeight / 2, '#00FFCC')
+    }
+    actions.check()
+  }
+
+  const handleFold = () => {
+    soundEffects.playFold()
+    if (foldButtonRef.current) animateButton(foldButtonRef.current, 'action-fold')
+    const playerPos = state.players[state.activePlayerIndex]
+    if (playerPos) {
+      createFloatingText('🚫 FOLD', window.innerWidth / 2, window.innerHeight / 2, '#FF6B35')
+    }
+    actions.fold()
+  }
+
+  const handleBet = (amount: number) => {
+    soundEffects.playBet()
+    if (callButtonRef.current) animateButton(callButtonRef.current, 'action-bet')
+    const playerPos = state.players[state.activePlayerIndex]
+    if (playerPos) {
+      createFloatingText(`💰 BET ${amount}`, window.innerWidth / 2, window.innerHeight / 2, '#00FF88')
+    }
+    actions.bet(amount)
+  }
+
+  const handleStartGame = () => {
+    soundEffects.playCall()
+    if (startButtonRef.current) animateButton(startButtonRef.current, 'action-call')
+    createFloatingText('🎮 GAME START', window.innerWidth / 2, window.innerHeight / 2, '#00FFCC')
+    actions.startGame()
+  }
+
+  const handleNextRound = () => {
+    soundEffects.playWin()
+    if (nextRoundButtonRef.current) animateButton(nextRoundButtonRef.current, 'win-pulse')
+    actions.nextRound()
+  }
+
 
   const canAct = state.phase !== 'idle' && state.phase !== 'showdown' && !state.actionInProgress
   const isPlayerTurn = state.players.length > 0 && state.players[state.activePlayerIndex]?.id === state.playerId
@@ -108,31 +165,6 @@ export default function PokerPage() {
               </div>
             </div>
 
-            {/* Local Mode */}
-            <div style={{ padding: 12, background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.3) 0%, rgba(255, 87, 34, 0.2) 100%)', borderRadius: 8, border: '2px solid #FF6B35' }}>
-              <h3 style={{ margin: '0 0 6px 0', color: '#FF6B35', fontSize: 13, textShadow: '0 0 10px rgba(255, 107, 53, 0.8)' }}>🎮 Local Game</h3>
-              <p style={{ fontSize: 10, color: '#FFB347', margin: '0 0 8px 0' }}>Play against AI (coming soon)</p>
-              <button
-                onClick={() => {
-                  actions.createLocalGame()
-                  setGameMode('playing')
-                }}
-                disabled={true}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  background: '#555',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'not-allowed',
-                  fontWeight: 'bold',
-                  fontSize: 12
-                }}
-              >
-                Start Local Game (Coming Soon)
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -140,9 +172,9 @@ export default function PokerPage() {
   }
 
   return (
-    <div className="poker-table--wrapper" style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100vh' }}>
+    <div className="poker-table--wrapper" style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100vh', paddingTop: '50px', paddingBottom: '70px' }}>
       {/* Top Info Navbar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 300, background: 'linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(22,33,62,0.9) 100%)', borderBottom: '2px solid #00BFFF', boxShadow: '0 4px 20px rgba(0, 191, 255, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', height: '50px' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300, background: 'linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(22,33,62,0.9) 100%)', borderBottom: '2px solid #00BFFF', boxShadow: '0 4px 20px rgba(0, 191, 255, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', height: '50px' }}>
         {/* Game ID and Connection */}
         <div style={{ display: 'flex', gap: 20, alignItems: 'center', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -197,13 +229,35 @@ export default function PokerPage() {
               <span style={{ color: i === state.activePlayerIndex ? '#00FFCC' : '#aaa', fontSize: 10 }}>({p.chips})</span>
             </div>
           ))}
+
+          {/* Sound Mute Button */}
+          <button
+            onClick={() => {
+              const muted = soundEffects.toggleMute()
+              setIsMuted(muted)
+            }}
+            title={isMuted ? 'Unmute' : 'Mute'}
+            style={{
+              marginLeft: 10,
+              padding: '4px 8px',
+              background: isMuted ? '#FF6B35' : '#00FF88',
+              border: 'none',
+              borderRadius: 4,
+              color: '#000',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
         </div>
       </div>
 
       {/* Bet Slider - positioned at bottom left when active */}
       {canAct && isPlayerTurn && (
         <div style={{ position: 'absolute', bottom: 80, left: 20, zIndex: 300, width: 350 }}>
-          <ActionPanel pot={state.pot} onBet={(amt: number) => actions.bet(amt)} />
+          <ActionPanel pot={state.pot} onBet={handleBet} />
         </div>
       )}
 
@@ -288,7 +342,7 @@ export default function PokerPage() {
       )}
 
       {/* Bottom Action Bar */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 300, background: 'linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(22,33,62,0.9) 100%)', borderTop: '2px solid #FFD700', boxShadow: '0 -4px 20px rgba(255, 215, 0, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', height: '70px' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300, background: 'linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(22,33,62,0.9) 100%)', borderTop: '2px solid #FFD700', boxShadow: '0 -4px 20px rgba(255, 215, 0, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', height: '70px' }}>
         {/* Back to Menu Button */}
         <button
           onClick={() => {
@@ -304,19 +358,20 @@ export default function PokerPage() {
         <div className='action-buttons' style={{ gap: 15, display: 'flex', justifyContent: 'center', flex: 1 }}>
           {state.phase === 'idle' && state.players.length === 2 && state.players[0]?.id === state.playerId ? (
             <button
+              ref={startButtonRef}
               className='action-button'
-              onClick={() => actions.startGame()}
+              onClick={handleStartGame}
               style={{ background: 'linear-gradient(135deg, #00FF88 0%, #00FFCC 100%)', color: '#000', fontSize: 16, fontWeight: 'bold', padding: '12px 40px', borderRadius: 25, boxShadow: '0 0 20px rgba(0, 255, 136, 0.8)', border: 'none', cursor: 'pointer' }}
             >
               🎮 Start Game
             </button>
           ) : canAct && isPlayerTurn ? (
             <>
-              <button className='action-button' onClick={() => actions.check()} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #00BFFF 0%, #00FFFF 100%)', color: '#000', fontWeight: 'bold', boxShadow: '0 0 15px rgba(0, 191, 255, 0.8)', border: 'none', cursor: 'pointer', fontSize: 14 }}>✓ Call/Check</button>
-              <button className='fold-button' onClick={() => actions.fold()} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)', color: '#fff', fontWeight: 'bold', boxShadow: '0 0 15px rgba(255, 107, 53, 0.8)', border: 'none', cursor: 'pointer', fontSize: 14 }}>🚫 Fold</button>
+              <button ref={callButtonRef} className='action-button' onClick={handleCheck} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #00BFFF 0%, #00FFFF 100%)', color: '#000', fontWeight: 'bold', boxShadow: '0 0 15px rgba(0, 191, 255, 0.8)', border: 'none', cursor: 'pointer', fontSize: 14 }}>✓ Call/Check</button>
+              <button ref={foldButtonRef} className='fold-button' onClick={handleFold} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)', color: '#fff', fontWeight: 'bold', boxShadow: '0 0 15px rgba(255, 107, 53, 0.8)', border: 'none', cursor: 'pointer', fontSize: 14 }}>🚫 Fold</button>
             </>
           ) : state.phase === 'showdown' ? (
-            <button className='action-button' onClick={() => actions.nextRound()} style={{ borderRadius: 25, padding: '12px 40px', fontSize: 16, fontWeight: 'bold', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#000', boxShadow: '0 0 20px rgba(255, 215, 0, 0.8)', border: 'none', cursor: 'pointer' }}>🎲 Next Round</button>
+            <button ref={nextRoundButtonRef} className='action-button' onClick={handleNextRound} style={{ borderRadius: 25, padding: '12px 40px', fontSize: 16, fontWeight: 'bold', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#000', boxShadow: '0 0 20px rgba(255, 215, 0, 0.8)', border: 'none', cursor: 'pointer' }}>🎲 Next Round</button>
           ) : null}
         </div>
 
