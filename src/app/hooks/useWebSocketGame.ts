@@ -116,19 +116,21 @@ export default function useWebSocketGame() {
     })
   }, [])
 
-  const createOnlineGame = useCallback((playerName: string) => {
+  const createOnlineGame = useCallback((playerName: string, walletAddress?: string) => {
     const client = getWebSocketClient()
     client.send('createGame', {
       playerName,
+      walletAddress, // Send wallet address to server
       gameType: 'online',
     })
   }, [])
 
-  const joinGame = useCallback((gId: string, playerName: string) => {
+  const joinGame = useCallback((gameId: string, playerName: string, walletAddress?: string) => {
     const client = getWebSocketClient()
     client.send('joinGame', {
-      gameId: gId,
+      gameId,
       playerName,
+      walletAddress, // Send wallet address to server
     })
   }, [])
 

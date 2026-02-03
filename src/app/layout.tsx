@@ -1,6 +1,13 @@
+'use client'
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import '@rainbow-me/rainbowkit/styles.css';
+
+import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { config } from './config/wagmi';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,10 +19,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Poker",
-  description: "Texas Hold'em Poker Game",
-};
+const queryClient = new QueryClient();
 
 export default function RootLayout({
   children,
@@ -27,7 +31,13 @@ export default function RootLayout({
       <body
         style={{ width: '100%', height: '100vh', margin: 0, padding: 0, fontFamily: 'Inter, system-ui, sans-serif' }}
       >
-        {children}
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>
+            <RainbowKitProvider>
+              {children}
+            </RainbowKitProvider>
+          </QueryClientProvider>
+        </WagmiProvider>
       </body>
     </html>
   );

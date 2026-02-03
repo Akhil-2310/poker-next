@@ -6,9 +6,12 @@ import useWebSocketGame from './hooks/useWebSocketGame'
 import './poker.css'
 import { soundEffects } from './utils/sounds'
 import { injectAnimationStyles, createFloatingText, animateButton } from './utils/animations'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { useAccount } from 'wagmi'
 
 export default function PokerPage() {
   const { state, connectionState, gameId, error, actions } = useWebSocketGame()
+  const { address, isConnected } = useAccount()
   const [gameMode, setGameMode] = useState<'menu' | 'playing'>('menu')
   const [joinGameId, setJoinGameId] = useState('')
   const [playerName, setPlayerName] = useState('Player')
@@ -94,9 +97,27 @@ export default function PokerPage() {
           <h1 style={{ marginBottom: 5, fontSize: 32, color: '#FFD700', textShadow: '0 0 20px rgba(255, 215, 0, 0.8)' }}>🎰 POKER</h1>
           <p style={{ fontSize: 12, color: '#FF69B4', marginBottom: 15, fontWeight: 'bold' }}>Texas Hold'em Card Game</p>
           
+          {/* Wallet Connection Section */}
+          <div style={{ marginBottom: 20, padding: 15, background: 'linear-gradient(135deg, rgba(138,43,226,0.3) 0%, rgba(75,0,130,0.3) 100%)', borderRadius: 12, border: '2px solid #9370DB' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#9370DB', fontSize: 13, textShadow: '0 0 10px rgba(147, 112, 219, 0.8)' }}>💎 Wallet Connection</h3>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <ConnectButton />
+            </div>
+            {isConnected && address && (
+              <div style={{ fontSize: 10, color: '#00FF00', marginTop: 8, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                ✓ Connected: {address.slice(0, 6)}...{address.slice(-4)}
+              </div>
+            )}
+            {!isConnected && (
+              <div style={{ fontSize: 10, color: '#FFD700', marginTop: 8 }}>
+                ⚠️ Connect wallet to play
+              </div>
+            )}
+          </div>
+
           <div style={{ marginBottom: 15, padding: 10, background: 'linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(22,33,62,0.8) 100%)', borderRadius: 8, border: '2px solid #00CED1' }}>
             <div style={{ fontSize: 12, marginBottom: 5 }}>
-              <strong style={{ color: '#00CED1' }}>Connection Status:</strong> <span style={{ color: connectionState === 'connected' ? '#00FF00' : connectionState === 'connecting' ? '#FFD700' : '#FF6B6B', fontWeight: 'bold', textShadow: '0 0 10px currentColor' }}>
+              <strong style={{ color: '#00CED1' }}>Server Status:</strong> <span style={{ color: connectionState === 'connected' ? '#00FF00' : connectionState === 'connecting' ? '#FFD700' : '#FF6B6B', fontWeight: 'bold', textShadow: '0 0 10px currentColor' }}>
                 ● {connectionState.toUpperCase()}
               </span>
             </div>
@@ -121,25 +142,25 @@ export default function PokerPage() {
               <p style={{ fontSize: 10, color: '#00FFCC', margin: '0 0 8px 0' }}>Create a new game and share the ID with other players</p>
               <button
                 onClick={() => {
-                  actions.createOnlineGame(playerName)
+                  actions.createOnlineGame(playerName, address)
                   setGameMode('playing')
                 }}
-                disabled={connectionState !== 'connected' || !playerName.trim()}
+                disabled={!isConnected || connectionState !== 'connected' || !playerName.trim()}
                 style={{
                   width: '100%',
                   padding: 10,
-                  background: connectionState === 'connected' && playerName.trim() ? 'linear-gradient(135deg, #00FF88 0%, #00FFCC 100%)' : '#555',
-                  color: connectionState === 'connected' && playerName.trim() ? '#000' : '#fff',
+                  background: isConnected && connectionState === 'connected' && playerName.trim() ? 'linear-gradient(135deg, #00FF88 0%, #00FFCC 100%)' : '#555',
+                  color: isConnected && connectionState === 'connected' && playerName.trim() ? '#000' : '#fff',
                   border: 'none',
                   borderRadius: 6,
-                  cursor: connectionState === 'connected' && playerName.trim() ? 'pointer' : 'not-allowed',
+                  cursor: isConnected && connectionState === 'connected' && playerName.trim() ? 'pointer' : 'not-allowed',
                   fontWeight: 'bold',
                   fontSize: 12,
                   transition: 'all 0.3s ease',
-                  boxShadow: connectionState === 'connected' && playerName.trim() ? '0 0 20px rgba(0, 255, 136, 0.8)' : 'none'
+                  boxShadow: isConnected && connectionState === 'connected' && playerName.trim() ? '0 0 20px rgba(0, 255, 136, 0.8)' : 'none'
                 }}
               >
-                Create Online Game
+                {!isConnected ? '🔒 Connect Wallet First' : 'Create Online Game'}
               </button>
             </div>
 
@@ -157,24 +178,24 @@ export default function PokerPage() {
                 />
                 <button
                   onClick={() => {
-                    actions.joinGame(joinGameId, playerName)
+                    actions.joinGame(joinGameId, playerName, address)
                     setGameMode('playing')
                   }}
-                  disabled={!joinGameId.trim() || connectionState !== 'connected' || !playerName.trim()}
+                  disabled={!isConnected || !joinGameId.trim() || connectionState !== 'connected' || !playerName.trim()}
                   style={{
                     padding: '8px 20px',
-                    background: connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? 'linear-gradient(135deg, #00BFFF 0%, #00FFFF 100%)' : '#555',
-                    color: connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? '#000' : '#fff',
+                    background: isConnected && connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? 'linear-gradient(135deg, #00BFFF 0%, #00FFFF 100%)' : '#555',
+                    color: isConnected && connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? '#000' : '#fff',
                     border: 'none',
                     borderRadius: 6,
-                    cursor: connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? 'pointer' : 'not-allowed',
+                    cursor: isConnected && connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? 'pointer' : 'not-allowed',
                     fontWeight: 'bold',
                     fontSize: 11,
                     transition: 'all 0.3s ease',
-                    boxShadow: connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? '0 0 15px rgba(0, 191, 255, 0.8)' : 'none'
+                    boxShadow: isConnected && connectionState === 'connected' && joinGameId.trim() && playerName.trim() ? '0 0 15px rgba(0, 191, 255, 0.8)' : 'none'
                   }}
                 >
-                  Join
+                  {!isConnected ? '🔒' : 'Join'}
                 </button>
               </div>
             </div>
