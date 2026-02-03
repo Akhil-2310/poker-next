@@ -686,8 +686,10 @@ function broadcastGameState(gameId) {
   });
 }
 
-server.listen(3001, () => {
+const PORT = process.env.PORT || 3001;
+
+server.listen(PORT, () => {
   console.log('🎮 ═══════════════════════════════════════════════════════');
-  console.log('✅  WebSocket Poker Server listening on ws://localhost:3001');
+  console.log(`✅  WebSocket Poker Server listening on port ${PORT}`);
   console.log('🎮 ═══════════════════════════════════════════════════════\n');
 });
