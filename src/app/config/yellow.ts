@@ -1,168 +1,184 @@
+/**
+ * Yellow Network Configuration using @erc7824/nitrolite SDK
+ * This module provides the client for off-chain poker sessions
+ */
 
+import {
+  NitroliteClient,
+  WalletStateSigner,
+  createECDSAMessageSigner,
+  createAppSessionMessage,
+  parseAnyRPCResponse as parseRPCResponse,
+  createCloseChannelMessage
+} from '@erc7824/nitrolite';
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 
-// TODO: Uncomment when Yellow SDK is installed
-import { YellowClient, AppSession } from '@yellow-network/sdk'
-import { Client } from "yellow-ts";
+// Yellow Network Contract Addresses (Sepolia Testnet)
+export const YELLOW_CONTRACTS = {
+  custody: '0x019B65A265EB3363822f2752141b3dF16131b262',
+  adjudicator: '0x7c7ccbc98469190849BCC6c926307794fDfB11F2',
+} as const;
 
-interface YellowConfig {
-  networkUrl: string
-  apiKey: string
-  chainId: number
+// WebSocket endpoint for Yellow Network Sandbox
+export const YELLOW_WS_URL = 'wss://clearnet-sandbox.yellow.com/ws';
+
+// Token used for chips in Yellow Network (Sandbox uses ytest.usd)
+export const CHIP_TOKEN = 'ytest.usd';
+
+export interface YellowConfig {
+  wsUrl: string;
+  chainId: number;
+  contracts: typeof YELLOW_CONTRACTS;
 }
 
-// Yellow Network Configuration
 export const yellowConfig: YellowConfig = {
-  networkUrl: process.env.NEXT_PUBLIC_YELLOW_NETWORK_URL || 'wss://yellow-network-url',
-  apiKey: process.env.NEXT_PUBLIC_YELLOW_API_KEY || '',
-  chainId: parseInt(process.env.NEXT_PUBLIC_YELLOW_CHAIN_ID || '1'),
+  wsUrl: YELLOW_WS_URL,
+  chainId: sepolia.id,
+  contracts: YELLOW_CONTRACTS,
+};
+
+/**
+ * Creates a Yellow Network session client
+ * This is used by the frontend to interact with the Yellow Network
+ */
+export function createYellowClient(privateKey: `0x${string}`, rpcUrl?: string) {
+  const account = privateKeyToAccount(privateKey);
+
+  const publicClient = createPublicClient({
+    chain: sepolia,
+    transport: http(rpcUrl || process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
+  });
+
+  const walletClient = createWalletClient({
+    chain: sepolia,
+    transport: http(),
+    account,
+  });
+
+  const nitroliteClient = new NitroliteClient({
+    publicClient,
+    walletClient,
+    stateSigner: new WalletStateSigner(walletClient),
+    addresses: YELLOW_CONTRACTS,
+    chainId: sepolia.id,
+    challengeDuration: 3600n,
+  });
+
+  return {
+    account,
+    publicClient,
+    walletClient,
+    nitroliteClient,
+  };
 }
 
-// TODO: Initialize Yellow Client after SDK installation
-export const yellowClient = new Client({
-    url: 'wss://clearnet.yellow.com/ws'
-});
+/**
+ * Session signer for signing game actions
+ */
+export async function createSessionSigner() {
+  const sessionPrivateKey = generatePrivateKey();
+  const sessionSigner = createECDSAMessageSigner(sessionPrivateKey);
+  const sessionAccount = privateKeyToAccount(sessionPrivateKey);
 
-// ====== YELLOW NETWORK INTEGRATION STEPS ======
-//
-// 1. CREATE APP SESSION (When game starts)
-//    - Called after both players join
-//    - Requires both player wallet addresses
-//    - Returns session ID
-//
-// Example:
-export async function createGameSession(
+  return {
+    signer: sessionSigner,
+    address: sessionAccount.address,
+    privateKey: sessionPrivateKey,
+  };
+}
+
+/**
+ * Creates a poker app session message
+ */
+export async function createPokerSessionMessage(
+  sessionSigner: any,
   player1Address: string,
   player2Address: string,
-  initialDeposit: number
+  buyIn: string
 ) {
-  const session = await yellowClient.createAppSession({
+  const appDefinition = {
+    application: 'poker-app-v1',
+    protocol: 'poker-app-v1',
     participants: [player1Address, player2Address],
-    initialBalance: {
-      [player1Address]: initialDeposit,
-      [player2Address]: initialDeposit,
-    },
-    metadata: {
-      gameType: 'poker',
-      version: '1.0',
-    },
-  })
-  
-  return session
+    weights: [50, 50],
+    quorum: 100,
+    challenge: 0,
+    nonce: Date.now(),
+  };
+
+  const allocations = [
+    { participant: player1Address, asset: CHIP_TOKEN, amount: buyIn },
+    { participant: player2Address, asset: CHIP_TOKEN, amount: buyIn },
+  ];
+
+  const sessionPayload = { definition: appDefinition, allocations };
+  const sessionMessage = await createAppSessionMessage(
+    sessionSigner,
+    sessionPayload as any
+  );
+
+  return sessionMessage;
 }
 
-// 2. SIGN GAME ACTIONS (Every poker action)
-//    - bet, call, fold, check, raise
-//    - Creates cryptographic proof
-//    - Stored in state channel
-//
-// Example:
-export async function signAction(
+/**
+ * Signs a game action for the Yellow Network
+ * This creates a cryptographic proof of the action
+ */
+export async function signGameAction(
+  sessionSigner: any,
   sessionId: string,
-  walletAddress: string,
-  action: string,
-  amount?: number,
-  nonce?: number
+  action: 'FOLD' | 'CHECK' | 'BET' | 'RAISE' | 'CALL',
+  amount?: string
 ) {
-  const signature = await yellowClient.signStateUpdate({
+  const actionData = {
+    type: 'game_action',
     sessionId,
     action,
-    amount: amount || 0,
-    nonce: nonce || Date.now(),
+    amount: amount || '0',
     timestamp: Date.now(),
-  })
-  
-  return signature
+  };
+
+  const signature = await sessionSigner.signMessage({
+    message: JSON.stringify(actionData),
+  });
+
+  return {
+    ...actionData,
+    signature,
+  };
 }
 
-// 3. VERIFY SIGNATURES (Server-side)
-//    - Validate each action was signed by correct player
-//    - Prevent cheating/tampering
-//
-// Example (server.js):
-const isValid = await YellowVerifier.verifySignature({
-  signature: playerSignature,
-  sessionId: game.yellowSessionId,
-  action: message.payload.action,
-  walletAddress: player.walletAddress,
-})
+/**
+ * Creates a settlement proof for closing the game session
+ * This proof is verified by the Uniswap V4 hook before releasing funds
+ */
+export interface SettlementProof {
+  sessionId: string;
+  finalBalances: { [address: string]: string };
+  signatures: string[];
+  timestamp: number;
+}
 
-// 4. SETTLE SESSION (Game ends)
-//    - Distribute winnings
-//    - Close state channel
-//    - Submit final state on-chain (optional)
-//
-// Example:
-export async function settleGameSession(
+export async function createSettlementProof(
   sessionId: string,
-  winnerAddress: string,
-  pot: number
-) {
-  const settlement = await yellowClient.settleSession({
+  player1Address: string,
+  player1Balance: string,
+  player1Signature: string,
+  player2Address: string,
+  player2Balance: string,
+  player2Signature: string
+): Promise<SettlementProof> {
+  return {
     sessionId,
     finalBalances: {
-      [winnerAddress]: pot,
+      [player1Address]: player1Balance,
+      [player2Address]: player2Balance,
     },
-    closeChannel: true,
-  })
-  
-  return settlement
+    signatures: [player1Signature, player2Signature],
+    timestamp: Date.now(),
+  };
 }
 
-// 5. HANDLE DISCONNECTION (Player drops)
-//    - Store current state
-//    - Allow reconnection
-//    - Dispute resolution if needed
-//
-// Example:
-export async function handleDisconnection(
-  sessionId: string,
-  disconnectedPlayer: string
-) {
-  await yellowClient.pauseSession({
-    sessionId,
-    reason: 'Player disconnected',
-    timeout: 300000, // 5 minutes to reconnect
-  })
-}
-
-// ====== YELLOW NETWORK FLOW ======
-//
-// Game Start:
-//  1. Both players connect wallets
-//  2. Create game → Send wallet addresses to server
-//  3. Server stores wallet addresses
-//  4. Frontend calls createGameSession()
-//  5. Store sessionId in game state
-//
-// During Game:
-//  1. Player makes action (bet/fold/etc)
-//  2. Frontend calls signAction()
-//  3. Send action + signature to server
-//  4. Server verifies signature
-//  5. Server processes game logic
-//  6. Broadcast updated state
-//
-// Game End:
-//  1. Determine winner
-//  2. Call settleGameSession()
-//  3. Yellow Network distributes funds
-//  4. Display winner & payout
-//
-// ====== INTEGRATION WITH EXISTING CODE ======
-//
-// In page.tsx:
-//  - After game starts, create Yellow session
-//  - Before each action, sign with Yellow
-//  - On game end, settle Yellow session
-//
-// In useWebSocketGame.ts:
-//  - Add yellowSessionId to state
-//  - Modify action handlers to sign before sending
-//  - Add settlement on winner determined
-//
-// In server.js:
-//  - Add signature verification middleware
-//  - Store signatures for dispute resolution
-//  - Validate all actions have valid signatures
-
-export default yellowConfig
+export default yellowConfig;

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useCallback, useEffect } from 'react'
 import { getWebSocketClient } from '../utils/websocket'
+import { signGameAction } from '../config/yellow'
 
 type Card = { cardFace: string; suit: string; animationDelay?: number }
 type Player = {
@@ -14,6 +15,7 @@ type Player = {
   hasDealerChip?: boolean
   hand?: Card[]
   avatarURL?: string
+  walletAddress?: string
 }
 
 type GamePhase = 'idle' | 'betting1' | 'flop' | 'betting2' | 'turn' | 'betting3' | 'river' | 'betting4' | 'showdown'
@@ -31,6 +33,7 @@ export default function useWebSocketGame() {
     playerId: '',
     winner: null as any,
     foldWinner: null as any,
+    yellowSessionId: null as string | null, // Yellow Network session ID
   })
 
   const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected')
@@ -212,6 +215,7 @@ export default function useWebSocketGame() {
       playerId: '',
       winner: null,
       foldWinner: null,
+      yellowSessionId: null,
     })
     setError('')
   }, [])
