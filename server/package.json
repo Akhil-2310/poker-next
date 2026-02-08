@@ -14,9 +14,12 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "uuid": "^13.0.0",
-    "ws": "^8.19.0"
+    "ws": "^8.19.0",
+    "yellow-ts": "^0.0.10"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/ws": "^8.18.1",
     "nodemon": "^3.1.11"
   }
 }
