@@ -13,6 +13,8 @@ The game is built using a combination of next-generation Web3 technologies to de
 
 ---
 
+## [Business Plan](https://www.canva.com/design/DAHAtGbqnDY/NjY_JkwBYlABojoM8Npx9Q/edit)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
