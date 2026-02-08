@@ -9,10 +9,12 @@ import { injectAnimationStyles, createFloatingText, animateButton } from './util
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
 import YellowArea from './components/YellowArea'
+import { useDisplayName } from './hooks/useBasename'
 
 export default function PokerPage() {
   const { state, connectionState, gameId, error, actions } = useWebSocketGame()
   const { address, isConnected } = useAccount()
+  const { displayName, isBasename, avatar, isLoading: isLoadingName } = useDisplayName(address as `0x${string}` | undefined)
   const [gameMode, setGameMode] = useState<'menu' | 'playing'>('menu')
   const [joinGameId, setJoinGameId] = useState('')
   const [playerName, setPlayerName] = useState('Player')
@@ -105,8 +107,13 @@ export default function PokerPage() {
               <ConnectButton />
             </div>
             {isConnected && address && (
-              <div style={{ fontSize: 10, color: '#00FF00', marginTop: 8, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                ✓ Connected: {address.slice(0, 6)}...{address.slice(-4)}
+              <div style={{ fontSize: 11, color: '#00FF00', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {avatar && (
+                  <img src={avatar} alt="Avatar" style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #00FF00' }} />
+                )}
+                <span style={{ fontFamily: isBasename ? 'inherit' : 'monospace', fontWeight: isBasename ? 'bold' : 'normal', color: isBasename ? '#00BFFF' : '#00FF00' }}>
+                  {isLoadingName ? '...' : `✓ ${displayName}`}
+                </span>
               </div>
             )}
             {!isConnected && (
