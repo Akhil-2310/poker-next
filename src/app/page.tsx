@@ -8,6 +8,7 @@ import { soundEffects } from './utils/sounds'
 import { injectAnimationStyles, createFloatingText, animateButton } from './utils/animations'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
+import YellowArea from './components/YellowArea'
 
 export default function PokerPage() {
   const { state, connectionState, gameId, error, actions } = useWebSocketGame()
@@ -43,7 +44,7 @@ export default function PokerPage() {
         return
       }
     }
-    
+
     // Otherwise it's a "Check"
     soundEffects.playCheck()
     if (callButtonRef.current) animateButton(callButtonRef.current, 'action-call')
@@ -96,7 +97,7 @@ export default function PokerPage() {
         <div style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #16213e 100%)', padding: 30, borderRadius: 16, color: 'white', textAlign: 'center', maxWidth: 480, border: '3px solid #FFD700', boxShadow: '0 0 50px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 107, 107, 0.3)', maxHeight: '95vh', overflowY: 'auto' }}>
           <h1 style={{ marginBottom: 5, fontSize: 32, color: '#FFD700', textShadow: '0 0 20px rgba(255, 215, 0, 0.8)' }}>🎰 POKER</h1>
           <p style={{ fontSize: 12, color: '#FF69B4', marginBottom: 15, fontWeight: 'bold' }}>Texas Hold'em Card Game</p>
-          
+
           {/* Wallet Connection Section */}
           <div style={{ marginBottom: 20, padding: 15, background: 'linear-gradient(135deg, rgba(138,43,226,0.3) 0%, rgba(75,0,130,0.3) 100%)', borderRadius: 12, border: '2px solid #9370DB' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#9370DB', fontSize: 13, textShadow: '0 0 10px rgba(147, 112, 219, 0.8)' }}>💎 Wallet Connection</h3>
@@ -123,6 +124,13 @@ export default function PokerPage() {
             </div>
             {error && <div style={{ fontSize: 10, color: '#FF6B6B', marginTop: 5, textShadow: '0 0 5px rgba(255, 107, 107, 0.8)' }}>⚠️ {error}</div>}
           </div>
+
+          {/* Yellow Network Wallet Section */}
+          {isConnected && (
+            <div style={{ marginBottom: 15 }}>
+              <YellowArea />
+            </div>
+          )}
 
           <div style={{ marginBottom: 15 }}>
             <label style={{ display: 'block', textAlign: 'left', marginBottom: 5, fontSize: 11, color: '#FFD700', fontWeight: 'bold', textShadow: '0 0 10px rgba(255, 215, 0, 0.6)' }}>YOUR NAME</label>
@@ -239,7 +247,7 @@ export default function PokerPage() {
               </button>
             )}
           </div>
-          
+
           <div style={{ borderLeft: '1px solid #00BFFF', paddingLeft: 20, display: 'flex', gap: 15, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: '#00BFFF', fontWeight: 'bold', fontSize: 11 }}>Connection:</span>
@@ -292,10 +300,10 @@ export default function PokerPage() {
 
       {/* Main Table */}
       <Table state={state} actions={actions} />
-      
+
       {/* Pot Display */}
       <div className='pot-container'>
-        <img style={{height: 55, width: 55}} src={'/old-assets/pot.svg'} alt="Pot"/>
+        <img style={{ height: 55, width: 55 }} src={'/old-assets/pot.svg'} alt="Pot" />
         <h4 style={{ margin: 0, color: 'white', fontSize: 18 }}>{state.pot}</h4>
       </div>
 
@@ -392,7 +400,7 @@ export default function PokerPage() {
           backdropFilter: 'blur(10px)'
         }}>
           <h3 style={{ color: '#00FFFF', textAlign: 'center', margin: '0 0 15px 0', fontSize: 15, textShadow: '0 0 10px rgba(0, 255, 255, 0.8)', fontWeight: 'bold' }}>📊 HAND COMPARISON</h3>
-          
+
           {/* Community Cards on Table */}
           <div style={{ marginBottom: 15, padding: 10, background: 'rgba(255, 215, 0, 0.1)', border: '2px solid #FFD700', borderRadius: 10 }}>
             <p style={{ margin: '0 0 8px 0', fontSize: 12, fontWeight: 'bold', color: '#FFD700', textAlign: 'center' }}>🃏 Community Cards</p>
@@ -412,7 +420,7 @@ export default function PokerPage() {
                   color: card.suit === 'hearts' || card.suit === 'diamonds' ? '#FF6B6B' : '#ffffff',
                   textAlign: 'center'
                 }}>
-                  {card.rank}<br/>{card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠'}
+                  {card.rank}<br />{card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠'}
                 </div>
               ))}
             </div>
@@ -434,7 +442,7 @@ export default function PokerPage() {
                     {hand.name} {isWinner ? '👑' : ''}
                   </p>
                 </div>
-                
+
                 {/* Player's Hand Cards */}
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                   {hand.hand && hand.hand.map((card: any, cardIdx: number) => (
@@ -452,7 +460,7 @@ export default function PokerPage() {
                       color: card.suit === 'hearts' || card.suit === 'diamonds' ? '#FF6B6B' : '#ffffff',
                       textAlign: 'center'
                     }}>
-                      {card.rank}<br/>{card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠'}
+                      {card.rank}<br />{card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠'}
                     </div>
                   ))}
                 </div>
@@ -571,7 +579,7 @@ export default function PokerPage() {
 
               <button ref={foldButtonRef} className='fold-button' onClick={handleFold} style={{ borderRadius: 25, padding: '12px 40px', background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)', color: '#fff', fontWeight: 'bold', boxShadow: '0 0 15px rgba(255, 107, 53, 0.8)', border: '2px solid #FF8C42', cursor: 'pointer', fontSize: 14 }}>🚫 FOLD</button>
 
-              <button 
+              <button
                 onClick={() => {
                   soundEffects.playBet()
                   setShowRaiseModal(true)
@@ -596,7 +604,7 @@ export default function PokerPage() {
           <div style={{ color: '#FFD700', fontSize: 13, textAlign: 'center', minWidth: '120px' }}>
             {state.phase === 'idle' && state.players.length < 2 ? '⏳ Waiting for players...' : state.phase === 'idle' ? '' : `${state.players[state.activePlayerIndex]?.name}'s Turn`}
           </div>
-          
+
           {/* Betting Info */}
           <div style={{ display: 'flex', gap: 15, alignItems: 'center', paddingLeft: 15, borderLeft: '2px solid #FFD700' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -655,7 +663,7 @@ export default function PokerPage() {
                 if (label === '1/2') amount = Math.floor(playerChips / 2)
                 if (label === '3/4') amount = Math.floor((playerChips * 3) / 4)
                 if (label === 'ALL-IN') amount = playerChips
-                
+
                 return (
                   <button
                     key={i}
